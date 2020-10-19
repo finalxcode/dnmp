@@ -29,6 +29,7 @@ services:
       - net-mysql
       - net-redis
       - net-rabbit
+      - net-es
 
   mysql:
     image: mysql:8.0.11
@@ -52,24 +53,124 @@ services:
     ports:
       - "6379:6379"
 
-  # rabbitmq:
-  #   image: rabbitmq:3.7.6-management
-  #   container_name: dnmp-rabbitmq
-  #   hostname: rabbit
+  rabbitmq:
+    image: rabbitmq:3.7.6-management
+    container_name: dnmp-rabbitmq
+    hostname: rabbit
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - ./conf/rabbitmq.cnf:/etc/rabbitmq/rabbitmq.cnf:ro
+      # - ./rabbitmq/:/var/lib/rabbitmq/
+      - ./log/:/var/log/dnmp/:rw
+    networks:
+      - net-rabbit
+    environment:
+      RABBITMQ_DEFAULT_USER: "user"
+      RABBITMQ_DEFAULT_PASS: "123456"
+
+  # cerebro:
+  #   image: lmenezes/cerebro:0.8.3  #  cerebro镜像
+  #   container_name: cerebro
   #   ports:
-  #     - "5672:5672"
-  #     - "15672:15672"
-  #   volumes:
-  #     - ./conf/rabbitmq.cnf:/etc/rabbitmq/rabbitmq.cnf:ro
-  #     - ./rabbitmq/:/var/lib/rabbitmq/:rw
-  #     - ./log/:/var/log/dnmp/:rw      
+  #     - "36006:9000"  #  容器端口映射到本地36006端口
+  #   command:
+  #     - -Dhosts.0.host=http://dnmp-es:9200  # 容器内部的ES地址
   #   networks:
-  #     - net-rabbit
+  #     - net-es
+
+  # kibana:
+  #   image: docker.elastic.co/kibana/kibana:7.2.0  # kibana7.2镜像
+  #   container_name: kibana72  # 容器的名称
+  #   environment:    #  容器内部环境变量
+  #     #- I18N_LOCALE=zh-CN
+  #     - XPACK_GRAPH_ENABLED=true
+  #     - TIMELION_ENABLED=true
+  #     - XPACK_MONITORING_COLLECTION_ENABLED=true
+  #     - SERVER_PORT=5005     # Kibana端口
+  #     - ELASTICSEARCH_HOSTS=http://dnmp-es:9200   # ES地址
+  #   ports:
+  #     - "6005:5005"   #  容器端口5005映射到本地6005端口
+  #   networks:
+  #     - net-es
+
+# 单个es和elastichd工具
+  elasticsearch:
+    image: elasticsearch:7.2.0
+    container_name: dnmp-es
+    networks:
+    - net-es
+    volumes:
+    - ./es/data:/usr/share/elasticsearch/data:rw
+    - ./log/es_data:/usr/share/elasticsearch/logs:rw
+    environment:
+    - discovery.type=single-node
+    ports:
+    - "9200:9200"
+  #
+  # elastichd:
+  #   image: containerize/elastichd:latest
+  #   container_name: dnmp-es-hd
+  #   networks:
+  #   - net-es
+  #   ports:
+  #     - "9800:9800"
+  #   depends_on:
+  #     - "dnmp-es"
+
+# es集群
+  # elasticsearch:
+  #   image: docker.elastic.co/elasticsearch/elasticsearch:7.2.0  # ES 7.2镜像
+  #   container_name: es72_01 # 容器名称
   #   environment:
-  #     RABBITMQ_DEFAULT_USER: "user"
-  #     RABBITMQ_DEFAULT_PASS: "123456" 
+  #     - cluster.name=es_cluster  # 集群名称
+  #     - node.name=es_5001_data   #  节点名称
+  #     - http.port=5001    # 节点端口
+  #     - bootstrap.memory_lock=true
+  #     - ES_JAVA_OPTS=-Xms512m -Xmx512m  # 内存分配
+  #     - discovery.seed_hosts=es72_01,es72_02
+  #     - network.publish_host=dnmp-es
+  #     - cluster.initial_master_nodes=es_5001_data,es_5002_data
+  #   ulimits:
+  #     memlock:
+  #       soft: -1
+  #       hard: -1
+  #   volumes:
+  #     - ./es/data1:/usr/share/elasticsearch/data:rw
+  #     - ./log/es_data1:/usr/share/elasticsearch/logs:rw
+  #
+  #   ports:
+  #     - 36001:5001
+  #   networks:
+  #     - net-es
+  #
+  # elasticsearch2:
+  #   image: docker.elastic.co/elasticsearch/elasticsearch:7.2.0
+  #   container_name: es72_02
+  #   environment:
+  #     - cluster.name=es_cluster
+  #     - node.name=es_5002_data
+  #     - http.port=5002
+  #     - bootstrap.memory_lock=true
+  #     - ES_JAVA_OPTS=-Xms512m -Xmx512m
+  #     - discovery.seed_hosts=es72_01,es72_02
+  #     - cluster.initial_master_nodes=es_5001_data,es_5002_data
+  #   ulimits:
+  #     memlock:
+  #       soft: -1
+  #       hard: -1
+  #   volumes:
+  #     - ./es/data2:/usr/share/elasticsearch/data:rw
+  #     - ./log/es_data2:/usr/share/elasticsearch/logs:rw
+  #   ports:
+  #     - 36002:5002
+  #   networks:
+  #     - net-es
+
 networks:
   net-php:
   net-mysql:
   net-redis:
   net-rabbit:
+  net-es:

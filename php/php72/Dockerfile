@@ -1,118 +1,129 @@
-FROM php:7.2-fpm
+FROM php:7.1.9-fpm
 
 COPY ./sources.list.stretch /etc/apt/sources.list
 
-# Extensions: ctype, dom, fileinfo, ftp, hash, iconv, json, pdo, pdo_sqlite, session,
-# tokenizer, simplexml, xml, xmlreader, xmlwriter and phar are bundled and compiled into
-# PHP by default. If missing, install them directly by `docker-php-ext-install extension_name`
-
-# Notice:
-# 1. Mcrypt was DEPRECATED in PHP 7.1.0, and REMOVED in PHP 7.2.0.
-# 2. opcache requires PHP version >= 7.0.0.
-# 3. soap requires libxml2-dev.
-# 4. xml, xmlrpc, wddx require libxml2-dev and libxslt-dev.
-# 5. Line `&& :\` is just for better reading and do nothing.
-
-ENV PHPREDIS_VERSION 4.0.0
-
 RUN apt-get update \
-    && apt-get install -y libfreetype6-dev libjpeg62-turbo-dev libpng-dev \
-    && docker-php-ext-configure gd --with-freetype-dir=/usr/include/ --with-jpeg-dir=/usr/include/ \
-    && docker-php-ext-install gd \
-    && :\
-    && apt-get install -y libicu-dev \
-    && docker-php-ext-install intl \
-    && :\
-    && apt-get install -y libxml2-dev \
-    && apt-get install -y libxslt-dev \
-    && docker-php-ext-install soap \
-    && docker-php-ext-install xsl \
-    && docker-php-ext-install xmlrpc \
-    && docker-php-ext-install wddx \
-    && :\
-    && apt-get install -y libbz2-dev \
-    && docker-php-ext-install bz2 \
-    && :\
-    && docker-php-ext-install zip \
-    && docker-php-ext-install pcntl \
-    && docker-php-ext-install pdo_mysql \
-    && docker-php-ext-install mysqli \
-    && docker-php-ext-install mbstring \
-    && docker-php-ext-install exif \
-    && docker-php-ext-install bcmath \
-    && docker-php-ext-install calendar \
-    && docker-php-ext-install sockets \
-    && docker-php-ext-install gettext \
-    && docker-php-ext-install shmop \
-    && docker-php-ext-install sysvmsg \
-    && docker-php-ext-install sysvsem \
-    && docker-php-ext-install sysvshm \
-    && docker-php-ext-install opcache
-    #&& docker-php-ext-install pdo_firebird \
-    #&& docker-php-ext-install pdo_dblib \
-    #&& docker-php-ext-install pdo_oci \
-    #&& docker-php-ext-install pdo_odbc \
-    #&& docker-php-ext-install pdo_pgsql \
-    #&& docker-php-ext-install pgsql \
-    #&& docker-php-ext-install oci8 \
-    #&& docker-php-ext-install odbc \
-    #&& docker-php-ext-install dba \
-    #&& docker-php-ext-install interbase \
-    #&& :\
-    #&& apt-get install -y libmcrypt-dev \
-    #&& docker-php-ext-install mcrypt \
-    #&& :\
-    #&& apt-get install -y curl \
-    #&& apt-get install -y libcurl3 \
-    #&& apt-get install -y libcurl4-openssl-dev \
-    #&& docker-php-ext-install curl \
-    #&& :\
-    #&& apt-get install -y libreadline-dev \
-    #&& docker-php-ext-install readline \
-    #&& :\
-    #&& apt-get install -y libsnmp-dev \
-    #&& apt-get install -y snmp \
-    #&& docker-php-ext-install snmp \
-    #&& :\
-    #&& apt-get install -y libpspell-dev \
-    #&& apt-get install -y aspell-en \
-    #&& docker-php-ext-install pspell \
-    #&& :\
-    #&& apt-get install -y librecode0 \
-    #&& apt-get install -y librecode-dev \
-    #&& docker-php-ext-install recode \
-    #&& :\
-    #&& apt-get install -y libtidy-dev \
-    #&& docker-php-ext-install tidy \
-    #&& :\
-    #&& apt-get install -y libgmp-dev \
-    #&& ln -s /usr/include/x86_64-linux-gnu/gmp.h /usr/include/gmp.h \
-    #&& docker-php-ext-install gmp \
-    #&& :\
-    #&& apt-get install -y postgresql-client \
-    #&& apt-get install -y mysql-client \
-    #&& :\
-    #&& apt-get install -y libc-client-dev \
-    #&& docker-php-ext-configure imap --with-kerberos --with-imap-ssl \
-    #&& docker-php-ext-install imap \
-    #&& :\
-    #&& apt-get install -y libldb-dev \
-    #&& apt-get install -y libldap2-dev \
-    #&& docker-php-ext-configure ldap --with-libdir=lib/x86_64-linux-gnu \
-    #&& docker-php-ext-install ldap \
+  && apt-get install -y --no-install-recommends \
+    curl \
+    libicu-dev \
+    libmemcached-dev \
+    libz-dev \
+    libpq-dev \
+    libjpeg-dev \
+    libpng-dev \
+    libfreetype6-dev \
+    libssl-dev \
+    libmcrypt-dev \
+    libxml2-dev \
+    libbz2-dev \
+    libjpeg62-turbo-dev \
+    php-pear \
+    curl \
+    git \
+    subversion \
+  && rm -rf /var/lib/apt/lists/*
+
+# Install various PHP extensions
+RUN docker-php-ext-configure bcmath --enable-bcmath \
+    && docker-php-ext-configure pcntl --enable-pcntl \
+    && docker-php-ext-configure pdo_mysql --with-pdo-mysql \
+    && docker-php-ext-configure pdo_pgsql --with-pgsql \
+    && docker-php-ext-configure mbstring --enable-mbstring \
+    && docker-php-ext-configure soap --enable-soap \
+    && docker-php-ext-install \
+        bcmath \
+        intl \
+        mbstring \
+        mcrypt \
+        mysqli \
+        pcntl \
+        pdo_mysql \
+        pdo_pgsql \
+        soap \
+        sockets \
+        zip \
+  && docker-php-ext-configure gd \
+    --enable-gd-native-ttf \
+    --with-jpeg-dir=/usr/lib \
+    --with-freetype-dir=/usr/include/freetype2 && \
+    docker-php-ext-install gd \
+
+  && docker-php-ext-install opcache \
+  && docker-php-ext-enable opcache
+
+RUN curl -L -o /tmp/redis.tar.gz https://github.com/phpredis/phpredis/archive/3.1.3.tar.gz && \
+      tar xfz /tmp/redis.tar.gz && \
+      rm -r /tmp/redis.tar.gz && \
+      mkdir -p /usr/src/php/ext && \
+      mv phpredis-3.1.3 /usr/src/php/ext/redis && \
+      docker-php-ext-install redis
+
+# AST
+# RUN git clone https://github.com/nikic/php-ast /usr/src/php/ext/ast/ && \
+#     docker-php-ext-configure ast && \
+#     docker-php-ext-install ast
+
+# ICU - intl requirements for Symfony
+# Debian is out of date, and Symfony expects the latest - so build from source, unless a better alternative exists(?)
+#RUN curl -sS -o /tmp/icu.tar.gz -L http://download.icu-project.org/files/icu4c/58.2/icu4c-58_2-src.tgz \
+#    && tar -zxf /tmp/icu.tar.gz -C /tmp \
+#    && cd /tmp/icu/source \
+#    && ./configure --prefix=/usr/local \
+#    && make \
+#    && make install
+
+#RUN docker-php-ext-configure intl --with-icu-dir=/usr/local \
+#    && docker-php-ext-install intl
+
+# Install the php memcached extension
+RUN curl -L -o /tmp/memcached.tar.gz "https://github.com/php-memcached-dev/php-memcached/archive/php7.tar.gz" \
+  && mkdir -p memcached \
+  && tar -C memcached -zxvf /tmp/memcached.tar.gz --strip 1 \
+  && ( \
+    cd memcached \
+    && phpize \
+    && ./configure \
+    && make -j$(nproc) \
+    && make install \
+  ) \
+  && rm -r memcached \
+  && rm /tmp/memcached.tar.gz \
+  && docker-php-ext-enable memcached
+
+# Copy opcache configration
+#COPY ./opcache.ini /usr/local/etc/php/conf.d/opcache.ini
+
+# Install xDebug, if enabled
+#ARG INSTALL_XDEBUG=false
+#RUN if [ ${INSTALL_XDEBUG} = true ]; then \
+#    # Install the xdebug extension
+#    pecl install xdebug && \
+#    docker-php-ext-enable xdebug \
+#;fi
+
+# Copy xdebug configration for remote debugging
+#COPY ./xdebug.ini /usr/local/etc/php/conf.d/xdebug.ini
+
+# Copy timezone configration
+#COPY ./timezone.ini /usr/local/etc/php/conf.d/timezone.ini
+
+# Set timezone
+#RUN rm /etc/localtime
+#RUN ln -s /usr/share/zoneinfo/Europe/London /etc/localtime
+#RUN "date"
+
+# Short open tags fix - another Symfony requirements
+#COPY ./custom-php.ini /usr/local/etc/php/conf.d/custom-php.ini
 
 # Composer
-#RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/bin/ --filename=composer \
+ENV COMPOSER_HOME /var/www/.composer
 
-# Install Xdebug extension from source
-RUN pecl install xdebug && docker-php-ext-enable xdebug
+RUN curl -sS https://getcomposer.org/installer | php -- \
+    --install-dir=/usr/bin \
+    --filename=composer
 
-RUN curl -L -o /tmp/redis.tar.gz https://github.com/phpredis/phpredis/archive/$PHPREDIS_VERSION.tar.gz \
-    && tar xfz /tmp/redis.tar.gz \
-    && rm -r /tmp/redis.tar.gz \
-    && mkdir -p /usr/src/php/ext \
-    && mv phpredis-$PHPREDIS_VERSION /usr/src/php/ext/redis \
-    && docker-php-ext-install redis \
-    && rm -rf /usr/src/php
+RUN chown -R www-data:www-data /var/www/
 
+RUN mkdir -p $COMPOSER_HOME/cache
 
+VOLUME $COMPOSER_HOME
